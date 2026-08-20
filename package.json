@@ -1,0 +1,80 @@
+{
+  "name": "rmindex-ts",
+  "version": "0.1.0",
+  "description": "Catalog, full-text search and page images over a local reMarkable mirror",
+  "keywords": [
+    "remarkable",
+    "index",
+    "search",
+    "sqlite",
+    "typescript"
+  ],
+  "homepage": "https://github.com/ludekvodicka/rmindex-ts#readme",
+  "bugs": {
+    "url": "https://github.com/ludekvodicka/rmindex-ts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ludekvodicka/rmindex-ts.git"
+  },
+  "author": "Ludek Vodicka",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.9"
+  },
+  "overrides": {
+    "esbuild": "0.28.2"
+  },
+  "allowScripts": {
+    "esbuild": true
+  },
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json && node scripts/create-cjs-declarations.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:package": "npm run build && node tests/package/esm.mjs && node tests/package/cjs.cjs && tsc -p tsconfig.package.json && publint",
+    "check": "npm run typecheck && npm run test && npm run test:package",
+    "prepublishOnly": "node scripts/check-release-dependencies.mjs && npm run check"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.3"
+  },
+  "peerDependencies": {
+    "rmcommunication-ts": "^0.2.0",
+    "rmscene-ts": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.19.43",
+    "publint": "^0.3.23",
+    "rmcommunication-ts": "file:../rmcommunication-ts",
+    "rmscene-ts": "^0.1.0",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
