@@ -67,6 +67,12 @@ describe("page derivation", () => {
     expect(existsSync(pageImagePath(root, DOCUMENT_ID, 1))).toBe(false);
   });
 
+  it("refuses a document id that is not a single path segment", async () => {
+    const root = await temporaryRoot();
+    expect(() => pageImagePath(root, "../../etc", 1)).toThrow("Not a document id");
+    expect(() => pageImagePath(root, DOCUMENT_ID, 0)).toThrow("Not a page number");
+  });
+
   it("makes a page's typed text searchable through the index", async () => {
     const root = await sceneMirror();
     const derived = await derivePages(root);

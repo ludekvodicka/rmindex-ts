@@ -88,6 +88,11 @@ export async function derivePages(mirrorRoot: string, options: DeriveOptions = {
 }
 
 export function pageImagePath(mirrorRoot: string, documentId: string, pageNumber: number): string {
+  // The id reaches this from callers that pass user input straight through, so it may only ever be one
+  // path segment.
+  if (!/^[A-Za-z0-9._-]+$/.test(documentId) || documentId === "." || documentId === "..")
+    throw new Error(`Not a document id: ${documentId}`);
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) throw new Error(`Not a page number: ${pageNumber}`);
   return join(mirrorRoot, "derived", "pages", documentId, `${pageNumber}.png`);
 }
 
