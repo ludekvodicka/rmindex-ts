@@ -3,6 +3,8 @@ import { join, resolve } from "node:path";
 
 import Database from "better-sqlite3";
 
+import { pathOf, readMirrorEntries, readMirrorState } from "./mirror-files.js";
+
 export interface MirrorIndexOptions {
   /** Overrides where the database lives; defaults to `<mirrorRoot>/derived/index.sqlite`. */
   readonly databasePath?: string;
@@ -39,7 +41,16 @@ export interface OpenDocumentState {
   readonly lastSyncAt: string | null;
 }
 
+export interface RebuildResult {
+  readonly documents: number;
+  readonly folders: number;
+  /** Documents whose files could not be read this time; they are picked up by the next rebuild. */
+  readonly skipped: readonly string[];
+}
+
 export interface MirrorIndex {
+  /** Rebuilds the catalog from the mirror. Everything here is derived, so a full rebuild is the model. */
+  rebuild(): RebuildResult;
   listDocuments(): readonly IndexedDocument[];
   getDocument(documentId: string): IndexedDocument | null;
   search(query: string, options?: SearchOptions): readonly SearchHit[];
@@ -59,6 +70,8 @@ export function openMirrorIndex(mirrorRoot: string, options: MirrorIndexOptions 
   applySchema(database);
 
   return {
+    rebuild: () => rebuild(database, root),
+
     listDocuments: () => database.prepare(`
       SELECT id, name, path, type, file_type AS fileType, parent_id AS parentId,
              page_count AS pageCount, modified_ms AS modifiedMs
@@ -130,4 +143,59 @@ function applySchema(database: Database.Database): void {
     );
   `);
   database.pragma(`user_version = ${SCHEMA_VERSION}`);
+}
+
+// A full rebuild inside one transaction, the model rmmirror proved: the mirror is the truth, the index
+// is a projection of it, so nothing can drift apart. Page text is carried over from the previous rows,
+// which is what lets a rebuild run without re-rendering anything.
+function rebuild(database: Database.Database, mirrorRoot: string): RebuildResult {
+  const { entries, skipped } = readMirrorEntries(mirrorRoot);
+  const state = readMirrorState(mirrorRoot);
+  const byId = new Map(entries.map(({ entry }) => [entry.id, entry]));
+
+  const carriedText = database.prepare("SELECT document_id AS documentId, page_number AS pageNumber, text FROM search")
+    .all() as { documentId: string; pageNumber: number | null; text: string }[];
+
+  const apply = database.transaction(() => {
+    database.exec("DELETE FROM documents; DELETE FROM search; DELETE FROM open_document;");
+    const insertDocument = database.prepare(`
+      INSERT INTO documents (id, name, path, type, file_type, parent_id, page_count, modified_ms, deleted)
+      VALUES (@id, @name, @path, @type, @fileType, @parentId, @pageCount, @modifiedMs, @deleted)
+    `);
+    const insertSearch = database.prepare("INSERT INTO search (document_id, page_number, text) VALUES (?, ?, ?)");
+    let documents = 0;
+    let folders = 0;
+    for (const { entry } of entries) {
+      const folder = entry.type === "CollectionType";
+      if (folder) folders++;
+      else documents++;
+      const path = pathOf(entry, byId);
+      insertDocument.run({
+        id: entry.id,
+        name: entry.name,
+        path,
+        type: folder ? "folder" : "document",
+        fileType: entry.fileType,
+        parentId: entry.parentId,
+        pageCount: entry.pages.length,
+        modifiedMs: entry.modifiedMs,
+        deleted: entry.deleted ? 1 : 0,
+      });
+      // The name and its folder path are searchable on their own, before any page text exists.
+      insertSearch.run(entry.id, null, path);
+      for (const carried of carriedText) {
+        if (carried.documentId === entry.id && carried.pageNumber !== null) {
+          insertSearch.run(carried.documentId, carried.pageNumber, carried.text);
+        }
+      }
+    }
+    const open = state.openDocumentId === null ? null : byId.get(state.openDocumentId) ?? null;
+    database.prepare(`
+      INSERT INTO open_document (id, document_id, name, page_number, last_sync_at) VALUES (1, ?, ?, ?, ?)
+    `).run(state.openDocumentId, open?.name ?? null, state.openDocumentPageNumber, state.finishedAt);
+    return { documents, folders };
+  });
+
+  const counts = apply();
+  return { ...counts, skipped };
 }

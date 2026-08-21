@@ -8,7 +8,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
 
 import { openMirrorIndex } from "../src/mirror-index.js";
+import { writeFixtureMirror, writeTornMetadata } from "./support/fixture-mirror.js";
 
+const DOCUMENT_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+const FOLDER_ID = "dddddddd-eeee-4fff-8aaa-bbbbbbbbbbbb";
+const OTHER_ID = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff";
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
@@ -51,6 +55,106 @@ describe("mirror index store", () => {
       expect(hits[0]?.document.path).toBe("Práce/Poznámky");
       expect(hits[0]?.pageNumber).toBe(1);
       expect(hits[0]?.excerpt).toContain("[žluťoučký]");
+    } finally {
+      index.close();
+    }
+  });
+
+  it("indexes documents, folders and nested paths from the mirror", async () => {
+    const root = await temporaryRoot();
+    writeFixtureMirror(root, [
+      { id: FOLDER_ID, name: "Práce", folder: true },
+      { id: DOCUMENT_ID, name: "Poznámky", parentId: FOLDER_ID, pageIds: ["page-1", "page-2"] },
+      { id: OTHER_ID, name: "Koš", deleted: true },
+    ], { openDocumentId: DOCUMENT_ID, openPageNumber: 2 });
+    const index = openMirrorIndex(root);
+    try {
+      const result = index.rebuild();
+
+      expect(result).toMatchObject({ documents: 2, folders: 1, skipped: [] });
+      expect(index.listDocuments().map((document) => document.path)).toEqual(["Práce", "Práce/Poznámky"]);
+      expect(index.getDocument(DOCUMENT_ID)).toMatchObject({
+        name: "Poznámky",
+        path: "Práce/Poznámky",
+        type: "document",
+        fileType: "notebook",
+        pageCount: 2,
+        parentId: FOLDER_ID,
+      });
+      expect(index.getDocument(OTHER_ID)).toBeNull();
+      expect(index.openDocument()).toEqual({
+        documentId: DOCUMENT_ID,
+        name: "Poznámky",
+        pageNumber: 2,
+        lastSyncAt: "2026-08-21T06:00:00.000Z",
+      });
+    } finally {
+      index.close();
+    }
+  });
+
+  it("finds a document by its name and by its folder path, diacritics or not", async () => {
+    const root = await temporaryRoot();
+    writeFixtureMirror(root, [
+      { id: FOLDER_ID, name: "Práce", folder: true },
+      { id: DOCUMENT_ID, name: "Poznámky", parentId: FOLDER_ID },
+    ]);
+    const index = openMirrorIndex(root);
+    try {
+      index.rebuild();
+
+      expect(index.search("poznamky").map((hit) => hit.document.id)).toEqual([DOCUMENT_ID]);
+      expect(index.search("prace").map((hit) => hit.document.id).sort()).toEqual([DOCUMENT_ID, FOLDER_ID].sort());
+      expect(index.search("   ")).toEqual([]);
+      expect(index.search("nothinghere")).toEqual([]);
+    } finally {
+      index.close();
+    }
+  });
+
+  it("skips a document whose metadata is torn and still finishes the rebuild", async () => {
+    const root = await temporaryRoot();
+    writeFixtureMirror(root, [{ id: DOCUMENT_ID, name: "Poznámky" }, { id: OTHER_ID, name: "Notes" }]);
+    writeTornMetadata(root, OTHER_ID);
+    const index = openMirrorIndex(root);
+    try {
+      const result = index.rebuild();
+
+      expect(result.documents).toBe(1);
+      expect(result.skipped).toHaveLength(1);
+      expect(result.skipped[0]).toContain(OTHER_ID);
+      expect(index.listDocuments().map((document) => document.id)).toEqual([DOCUMENT_ID]);
+    } finally {
+      index.close();
+    }
+  });
+
+  it("forgets a document that vanished from the mirror", async () => {
+    const root = await temporaryRoot();
+    writeFixtureMirror(root, [{ id: DOCUMENT_ID, name: "Poznámky" }, { id: OTHER_ID, name: "Notes" }]);
+    const index = openMirrorIndex(root);
+    try {
+      index.rebuild();
+      expect(index.listDocuments()).toHaveLength(2);
+
+      await rm(join(root, "xochitl", `${OTHER_ID}.metadata`));
+      index.rebuild();
+
+      expect(index.listDocuments().map((document) => document.id)).toEqual([DOCUMENT_ID]);
+      expect(index.search("notes")).toEqual([]);
+    } finally {
+      index.close();
+    }
+  });
+
+  it("answers that nothing was synced yet when there is no state file", async () => {
+    const root = await temporaryRoot();
+    writeFixtureMirror(root, [{ id: DOCUMENT_ID, name: "Poznámky" }]);
+    await rm(join(root, "state.json"));
+    const index = openMirrorIndex(root);
+    try {
+      index.rebuild();
+      expect(index.openDocument()).toEqual({ documentId: null, name: null, pageNumber: null, lastSyncAt: null });
     } finally {
       index.close();
     }
