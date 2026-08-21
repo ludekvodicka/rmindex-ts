@@ -48,9 +48,6 @@
   "overrides": {
     "esbuild": "0.28.2"
   },
-  "allowScripts": {
-    "esbuild": true
-  },
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json && node scripts/create-cjs-declarations.mjs",
     "typecheck": "tsc --noEmit",
