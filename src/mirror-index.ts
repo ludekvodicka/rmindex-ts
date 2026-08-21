@@ -176,8 +176,12 @@ function rebuild(database: Database.Database, mirrorRoot: string): RebuildResult
     let folders = 0;
     for (const { entry } of entries) {
       const folder = entry.type === "CollectionType";
-      if (folder) folders++;
-      else documents++;
+      // Counted the way every read query sees the index: the trash is stored, but never returned, so
+      // counting it here would report more documents than the tablet itself does.
+      if (!entry.deleted) {
+        if (folder) folders++;
+        else documents++;
+      }
       const path = pathOf(entry, byId);
       insertDocument.run({
         id: entry.id,

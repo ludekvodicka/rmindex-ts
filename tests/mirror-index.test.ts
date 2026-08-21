@@ -71,7 +71,8 @@ describe("mirror index store", () => {
     try {
       const result = index.rebuild();
 
-      expect(result).toMatchObject({ documents: 2, folders: 1, skipped: [] });
+      // "Koš" is in the trash, so it is stored but counted by nothing and returned by nothing.
+      expect(result).toMatchObject({ documents: 1, folders: 1, skipped: [] });
       expect(index.listDocuments().map((document) => document.path)).toEqual(["Práce", "Práce/Poznámky"]);
       expect(index.getDocument(DOCUMENT_ID)).toMatchObject({
         name: "Poznámky",

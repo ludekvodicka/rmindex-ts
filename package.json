@@ -1,6 +1,6 @@
 {
   "name": "rmindex-ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Catalog, full-text search and page images over a local reMarkable mirror",
   "keywords": [
     "remarkable",
@@ -61,13 +61,13 @@
     "better-sqlite3": "13.0.3"
   },
   "peerDependencies": {
-    "rmcommunication-ts": "^0.2.0"
+    "rmcommunication-ts": "^0.2.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.43",
     "publint": "^0.3.23",
-    "rmcommunication-ts": "^0.2.0",
+    "rmcommunication-ts": "^0.2.2",
     "rmscene-ts": "^0.1.0",
     "tsup": "^8.5.1",
     "typescript": "^7.0.2",

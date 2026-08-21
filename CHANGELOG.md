@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-08-21
+
+- Counts documents and folders the way every read query sees the index. The trash is stored but never
+  returned, so a rebuild used to report more documents than the tablet holds.
+- Requires `rmcommunication-ts` 0.2.2, which renders pages that are far taller than a sheet. Before it,
+  every page of a long scrolled note failed to render with `Input image exceeds pixel limit`.
+
 ## 0.1.0 - 2026-08-21
 
 - Opens a SQLite store under `<mirrorRoot>/derived/index.sqlite` over a local reMarkable mirror, with
