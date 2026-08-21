@@ -1,7 +1,7 @@
 name: CI
 
-# The two libraries this package indexes are peers. While they are local links here, CI builds them
-# from their own repositories; that goes away once the versions this package needs are on npm.
+# Both peers come from the registry like any other dependency, so this job checks out nothing but
+# itself.
 
 on:
   push:
@@ -19,28 +19,11 @@ jobs:
         node: [22, 24]
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: rmindex-ts
-      - uses: actions/checkout@v4
-        with:
-          repository: "${{ github.repository_owner }}/rmcommunication-ts"
-          path: rmcommunication-ts
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-          cache-dependency-path: |
-            rmcommunication-ts/package-lock.json
-            rmindex-ts/package-lock.json
       - run: npm ci
-        working-directory: rmcommunication-ts
-      - run: npm run build
-        working-directory: rmcommunication-ts
-      - run: npm ci
-        working-directory: rmindex-ts
       - run: npm run check
-        working-directory: rmindex-ts
       - run: npm audit --audit-level=low
-        working-directory: rmindex-ts
       - run: npm pack --dry-run
-        working-directory: rmindex-ts

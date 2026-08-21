@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 - unreleased
+## 0.1.0 - 2026-08-21
 
 - Opens a SQLite store under `<mirrorRoot>/derived/index.sqlite` over a local reMarkable mirror, with
   FTS5 full-text search tokenized as `unicode61 remove_diacritics 2` so Czech text matches without

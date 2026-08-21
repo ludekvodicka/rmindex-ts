@@ -67,7 +67,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.43",
     "publint": "^0.3.23",
-    "rmcommunication-ts": "file:../rmcommunication-ts",
+    "rmcommunication-ts": "^0.2.0",
     "rmscene-ts": "^0.1.0",
     "tsup": "^8.5.1",
     "typescript": "^7.0.2",
