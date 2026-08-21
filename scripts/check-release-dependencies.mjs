@@ -6,9 +6,9 @@ const [packageJson, packageLock] = await Promise.all(
   ),
 );
 
-// Both libraries stay peers so a consumer keeps one copy of each. Publishing this package before they
-// are on the registry would ship a dependency nobody can install.
-for (const name of ["rmscene-ts", "rmcommunication-ts"]) {
+// The communication package stays a peer so a consumer keeps one copy of it. Publishing this package
+// before that version is on the registry would ship a dependency nobody can install.
+for (const name of ["rmcommunication-ts"]) {
   const peer = packageJson.peerDependencies?.[name];
   const development = packageJson.devDependencies?.[name];
   const lockedDevelopment = packageLock.packages?.[""]?.devDependencies?.[name];

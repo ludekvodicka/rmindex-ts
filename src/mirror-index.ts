@@ -51,6 +51,8 @@ export interface RebuildResult {
 export interface MirrorIndex {
   /** Rebuilds the catalog from the mirror. Everything here is derived, so a full rebuild is the model. */
   rebuild(): RebuildResult;
+  /** Stores a page's typed text so search can find it. Derivation produces the text; this keeps it. */
+  recordPageText(documentId: string, pageNumber: number, text: string): void;
   listDocuments(): readonly IndexedDocument[];
   getDocument(documentId: string): IndexedDocument | null;
   search(query: string, options?: SearchOptions): readonly SearchHit[];
@@ -71,6 +73,13 @@ export function openMirrorIndex(mirrorRoot: string, options: MirrorIndexOptions 
 
   return {
     rebuild: () => rebuild(database, root),
+
+    recordPageText: (documentId, pageNumber, text) => {
+      database.prepare("DELETE FROM search WHERE document_id = ? AND page_number = ?").run(documentId, pageNumber);
+      if (text.trim().length === 0) return;
+      database.prepare("INSERT INTO search (document_id, page_number, text) VALUES (?, ?, ?)")
+        .run(documentId, pageNumber, text);
+    },
 
     listDocuments: () => database.prepare(`
       SELECT id, name, path, type, file_type AS fileType, parent_id AS parentId,

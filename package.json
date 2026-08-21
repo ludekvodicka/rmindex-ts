@@ -61,8 +61,7 @@
     "better-sqlite3": "13.0.3"
   },
   "peerDependencies": {
-    "rmcommunication-ts": "^0.2.0",
-    "rmscene-ts": "^0.1.0"
+    "rmcommunication-ts": "^0.2.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

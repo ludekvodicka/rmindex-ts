@@ -8,3 +8,9 @@
 - Reads only the mirror: the package never opens a device or network connection and writes nothing
   outside `<mirrorRoot>/derived/`.
 - Drops and recreates the store when its schema version moves, because everything in it is derivable.
+- Rebuilds the catalog and full-text search from the mirror in one transaction, tolerating a document
+  whose files were torn mid-sync.
+- Renders changed pages to PNG with their template background and extracts typed text beside them,
+  skipping pages whose cached image is already current.
+- Takes `rmcommunication-ts` as its only peer: scene parsing, rendering and text extraction go through
+  that package, so a consumer never ends up with two copies of the scene library.
