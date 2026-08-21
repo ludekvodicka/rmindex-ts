@@ -14,7 +14,8 @@ to a tablet, opens no network connection, needs no credentials, and writes nothi
 npm install rmindex-ts rmcommunication-ts rmscene-ts
 ```
 
-Node 20.9 or newer. `better-sqlite3` ships prebuilt binaries, so no compiler is needed.
+Node 22 or newer, one major above its sisters: `better-sqlite3` 13 requires it. It ships prebuilt
+binaries, so no compiler is needed.
 
 ## Use
 
